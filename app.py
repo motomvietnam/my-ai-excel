@@ -5,7 +5,7 @@ import re
 from io import BytesIO
 
 # 1. Cấu hình ban đầu
-st.set_page_config(page_title="SMART TOOLS HUB", layout="wide")
+st.set_page_config(page_title="Tinh chỉnh file excel", layout="wide")
 
 # Kết nối AI
 if "GEMINI_KEY" in st.secrets:
@@ -90,3 +90,4 @@ with tab2:
     if st.button("Viết bài"):
         res = model.generate_content(f"Viết bài quảng cáo cho {sp}")
         st.write(res.text)
+
