@@ -20,16 +20,18 @@ def hieu_chinh_excel(df):
     # Tạo một bản sao để không ảnh hưởng dữ liệu gốc
     df_clean = df.copy()
 
-    # Chuẩn hóa Họ Tên (Tìm cột có chữ 'tên' hoặc 'name')
+    # --- CHUẨN HÓA DỮ LIỆU ---
     for col in df_clean.columns:
-        if any(keyword in col.lower() for keyword in ['tên', 'name', 'ho ten']):
+        col_lower = col.lower()
+        
+        # A. Chuẩn hóa Họ Tên
+        if any(keyword in col_lower for keyword in ['tên', 'name', 'ho ten']):
             df_clean[col] = df_clean[col].apply(
                 lambda x: " ".join(str(x).strip().title().split()) if pd.notnull(x) and str(x).strip() != "" else x
             )
-    
-    # Chuẩn hóa Số điện thoại (Tìm cột có chữ 'sđt', 'điện thoại', 'phone')
-    for col in df_clean.columns:
-        if any(keyword in col.lower() for keyword in ['sđt', 'điện thoại', 'phone', 'tel']):
+        
+        # B. Chuẩn hóa Số điện thoại
+        elif any(keyword in col_lower for keyword in ['sđt', 'điện thoại', 'phone', 'tel']):
             def clean_p(p):
                 if pd.isnull(p) or str(p).strip() == "": return p
                 n = re.sub(r'\D', '', str(p)) # Chỉ giữ lại số
@@ -38,8 +40,15 @@ def hieu_chinh_excel(df):
                     return '0' + n[-9:] # Lấy 9 số cuối và thêm 0 để chuẩn 10 số
                 return n
             df_clean[col] = df_clean[col].apply(clean_p)
+            
+        # C. CHUẨN HÓA NGÀY THÁNG (FIX LỖI 00:00:00 VÀ SAI ĐỊNH DẠNG)
+        elif any(keyword in col_lower for keyword in ['ngày', 'date']):
+            # Ép kiểu về datetime, tự động nhận diện các định dạng ngày khác nhau
+            temp_date = pd.to_datetime(df_clean[col], errors='coerce', dayfirst=True)
+            # Chuyển về dạng chuỗi DD/MM/YYYY và xóa các ô lỗi (NaT)
+            df_clean[col] = temp_date.dt.strftime('%d/%m/%Y').fillna('')
 
-    # Tạo file Excel có định dạng chuyên nghiệp
+    # --- TẠO FILE EXCEL ĐỊNH DẠNG ĐẸP ---
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df_clean.to_excel(writer, index=False, sheet_name='Du_Lieu_Chuan_Hoa')
@@ -81,19 +90,19 @@ st.write("---")
 tab1, tab2 = st.tabs(["📊 Hiệu chỉnh Excel", "🤖 AI Content Marketing"])
 
 with tab1:
-    st.subheader("🛠️ Chuẩn hóa Họ tên & Số điện thoại hàng loạt")
+    st.subheader("🛠️ Chuẩn hóa Họ tên, SĐT & Ngày tháng hàng loạt")
     file = st.file_uploader("Kéo thả file Excel vào đây", type=["xlsx"])
     
     if file:
         try:
             df = pd.read_excel(file)
             st.info(f"Đã nhận file: {file.name} - Số dòng: {len(df)}")
-            st.dataframe(df.head(10), use_container_width=True) # Hiển thị 10 dòng đầu cho đẹp
+            st.dataframe(df.head(10), use_container_width=True) 
             
             if st.button("✨ Bắt đầu hiệu chỉnh dữ liệu"):
                 with st.spinner('Đang xử lý dữ liệu chuyên sâu...'):
                     processed_data = hieu_chinh_excel(df)
-                    st.success("✅ Đã hoàn thành! Toàn bộ font chữ đã được đưa về Arial, Họ tên viết hoa chuẩn, SĐT định dạng lại.")
+                    st.success("✅ Đã hoàn thành! Đã sửa lỗi Ngày tháng, Họ tên viết hoa chuẩn, SĐT định dạng lại.")
                     st.download_button(
                         label="📥 TẢI FILE EXCEL ĐÃ LÀM ĐẸP", 
                         data=processed_data, 
